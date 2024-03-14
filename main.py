@@ -1,33 +1,38 @@
-import mike
-import ConnectWifi
-from time import sleep
+import machine
+import time
 from dht_flame import read_dht, read_flame
+from mq5_sensor import read_mq5
+from thingspeak import send_to_thingspeak
+from buzzer import toggle_buzz
+import ConnectWifi
 
-# mike.blink(1)
-print ("run : main.py")
 ConnectWifi.connect()
+print("run: main.py")
+
+mq5_pin = 33  # Example pin number, adjust based on your connection
+adc = machine.ADC(machine.Pin(mq5_pin))
+
+buzzer = machine.Pin(13, machine.Pin.OUT)
+buzz_time = 0
+upload_time = 0
 
 while True:
-    try:
-        dht_data = read_dht()
-        temperature = dht_data[0]
-        humidity = dht_data[1]
-        flame = read_flame()
-        
-        print("Temperature: {}°C, Humidity: {}%, Flame: {}".format(temperature, humidity, "DETECTED" if flame else "ABSENT"))
-#         print("Temperature: ", temperature, Humidity: {}%, Flame: {}", , humidity, flame_detected ? "AB" : "PR")
-    except Exception as e:
-            print("Error reading DHT sensor:", e)
+    dht_temperature, dht_humidity = read_dht()
+    flame_detected = read_flame()
+    mq5_value = read_mq5(adc)
 
-    sleep(.5)  # Read every 1/2 seconds
+    print("Sensor Data - DHT: Temperature = {}°C, Humidity = {}%, Flame Detected = {}, MQ-5 Sensor Value: {}".format(
+        dht_temperature, dht_humidity, flame_detected, mq5_value
+    ))
     
-
-
-# while True:
-#     flame_detected = flame_sensor.value()  # Read digital signal
-#     if flame_detected:
-#         print("Flame detected!")
-#     else:
-#         print("No flame detected")
-# 
-#     time.sleep(2)  # Adjust the delay as needed
+    if dht_temperature == 0 and dht_humidity == 0:
+        continue
+    if mq5_value >= 50000 and time.time() - buzz_time >= 1:
+#         toggle_buzz(buzzer)
+        buzz_time = time.time()
+        print("buzzer: ", buzzer.value(), buzz_time)
+    else:
+        buzzer.off()
+    
+    if time.time() - upload_time >= 2:
+        send_to_thingspeak(mq5_value, dht_temperature, dht_humidity, flame_detected)

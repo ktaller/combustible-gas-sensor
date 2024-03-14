@@ -1,11 +1,8 @@
 from time import sleep
 import network
-import credentials
+from credentials import WIFI_SSID, WIFI_PASSWORD 
 
-def connect():
-    ssid = credentials.WIFI_SSID
-    password = credentials.WIFI_PASSWORD
-    
+def connect():    
     station = network.WLAN(network.STA_IF)
     
     if station.isconnected():
@@ -13,7 +10,7 @@ def connect():
         return
     
     station.active(True)
-    station.connect(ssid, password)
+    station.connect(WIFI_SSID, WIFI_PASSWORD)
     
     print("Connecting", end="")
     while not station.isconnected():
